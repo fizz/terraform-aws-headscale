@@ -94,6 +94,18 @@ variable "log_retention_days" {
   default     = 365
 }
 
+variable "sg_description" {
+  description = "Description for the security group"
+  type        = string
+  default     = "Headscale coordination server"
+}
+
+variable "ami_id" {
+  description = "EC2 AMI ID (optional — defaults to latest AL2023 ARM64)"
+  type        = string
+  default     = null
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

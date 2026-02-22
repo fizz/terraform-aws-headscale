@@ -32,6 +32,7 @@ data "aws_subnets" "public" {
 
 locals {
   selected_subnet_id = var.subnet_id != null ? var.subnet_id : data.aws_subnets.public.ids[0]
+  ami_id             = var.ami_id != null ? var.ami_id : data.aws_ami.al2023_arm.id
 }
 
 data "aws_subnet" "selected" {
@@ -54,7 +55,7 @@ resource "aws_eip" "this" {
 # Security Group
 resource "aws_security_group" "this" {
   name        = var.name_prefix
-  description = "Headscale coordination server"
+  description = var.sg_description
   vpc_id      = var.vpc_id
 
   # HTTPS for Headscale coordination + OIDC callback
@@ -91,7 +92,7 @@ resource "aws_security_group" "this" {
 
 # IAM Role for EC2
 resource "aws_iam_role" "this" {
-  name = "${var.name_prefix}-server"
+  name = var.name_prefix
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -105,7 +106,7 @@ resource "aws_iam_role" "this" {
   })
 
   tags = merge(var.tags, {
-    Name = "${var.name_prefix}-server"
+    Name = var.name_prefix
   })
 }
 
@@ -178,11 +179,11 @@ resource "aws_iam_role_policy" "ssm_params" {
 }
 
 resource "aws_iam_instance_profile" "this" {
-  name = "${var.name_prefix}-server"
+  name = var.name_prefix
   role = aws_iam_role.this.name
 
   tags = merge(var.tags, {
-    Name = "${var.name_prefix}-server"
+    Name = var.name_prefix
   })
 }
 
@@ -210,7 +211,7 @@ resource "aws_ebs_volume" "cache" {
 
 # EC2 Instance
 resource "aws_instance" "this" {
-  ami                    = data.aws_ami.al2023_arm.id
+  ami                    = local.ami_id
   instance_type          = var.instance_type
   subnet_id              = local.selected_subnet_id
   vpc_security_group_ids = [aws_security_group.this.id]
