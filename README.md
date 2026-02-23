@@ -1,4 +1,4 @@
-# terraform-headscale-aws
+# terraform-aws-headscale
 
 Self-hosted Headscale VPN on AWS. One Terraform module, one t4g.nano, ~$3/mo.
 

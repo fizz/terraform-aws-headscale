@@ -70,7 +70,7 @@ Use the `coordination-server` module in your primary account. See `examples/sing
 
 ```hcl
 module "headscale" {
-  source = "github.com/your-org/terraform-headscale-aws//modules/coordination-server"
+  source = "github.com/your-org/terraform-aws-headscale//modules/coordination-server"
 
   vpc_id            = "vpc-xxxxxxxx"
   domain            = "vpn.vanguard.dev"
@@ -95,7 +95,7 @@ For each additional VPC/account, deploy the `subnet-router` module:
 
 ```hcl
 module "subnet_router" {
-  source = "github.com/your-org/terraform-headscale-aws//modules/subnet-router"
+  source = "github.com/your-org/terraform-aws-headscale//modules/subnet-router"
 
   vpc_id               = "vpc-yyyyyyyy"
   headscale_server_url = "https://vpn.vanguard.dev"
