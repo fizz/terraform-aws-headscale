@@ -218,6 +218,9 @@ resource "aws_instance" "this" {
   iam_instance_profile   = aws_iam_instance_profile.this.name
   key_name               = var.ssh_key_name
 
+  # User data runs on first boot only. Replace the instance when it changes, or the
+  # new config never runs. The EIP and cache volume carry over.
+  user_data_replace_on_change = true
   user_data = templatefile("${path.module}/userdata.sh", {
     headscale_domain            = var.domain
     oidc_issuer                 = var.oidc_issuer

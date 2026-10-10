@@ -168,13 +168,16 @@ resource "aws_cloudwatch_log_group" "this" {
 
 # EC2 Instance - subnet router only (no Headscale server)
 resource "aws_instance" "this" {
-  ami                         = local.ami_id
-  instance_type               = var.instance_type
-  subnet_id                   = local.selected_subnet_id
-  vpc_security_group_ids      = [aws_security_group.this.id]
-  iam_instance_profile        = aws_iam_instance_profile.this.name
-  source_dest_check           = false # Required for subnet routing — instance forwards traffic for other IPs
+  ami                    = local.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = local.selected_subnet_id
+  vpc_security_group_ids = [aws_security_group.this.id]
+  iam_instance_profile   = aws_iam_instance_profile.this.name
+  source_dest_check      = false # Required for subnet routing — instance forwards traffic for other IPs
 
+  # User data runs on first boot only. Replace the instance when it changes, or the
+  # new config never runs.
+  user_data_replace_on_change = true
   user_data = templatefile("${path.module}/userdata.sh", {
     headscale_server_url = var.headscale_server_url
     advertised_routes    = join(",", var.advertised_routes)
