@@ -101,9 +101,8 @@ variable "sg_description" {
 }
 
 variable "ami_id" {
-  description = "EC2 AMI ID (optional — defaults to latest AL2023 ARM64)"
+  description = "EC2 AMI ID, Amazon Linux 2023 for arm64. See modules/coordination-server."
   type        = string
-  default     = null
 }
 
 variable "tags" {

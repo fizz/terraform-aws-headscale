@@ -70,3 +70,8 @@ variable "route53_zone_id" {
   type        = string
   default     = null
 }
+
+variable "ami_id" {
+  description = "Amazon Linux 2023 arm64 AMI ID. aws ssm get-parameter --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64 --query Parameter.Value --output text"
+  type        = string
+}

@@ -101,9 +101,13 @@ variable "sg_description" {
 }
 
 variable "ami_id" {
-  description = "EC2 AMI ID (optional — defaults to latest AL2023 ARM64)"
+  description = "EC2 AMI ID, Amazon Linux 2023 for arm64. Required: a new AMI replaces the instance, so the version changes only when this value does. The current one is at the SSM parameter /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64."
   type        = string
-  default     = null
+
+  validation {
+    condition     = can(regex("^ami-[0-9a-f]{8,17}$", var.ami_id))
+    error_message = "ami_id must be an AMI ID such as ami-0123456789abcdef0."
+  }
 }
 
 variable "tags" {

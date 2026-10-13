@@ -55,6 +55,8 @@ provider "aws" {
 module "coordination_server" {
   source = "../../modules/coordination-server"
 
+  ami_id = var.ami_id
+
   providers = {
     aws = aws.dev
   }
@@ -95,14 +97,16 @@ module "coordination_server" {
 module "subnet_router" {
   source = "../../modules/subnet-router"
 
+  ami_id = var.ami_id
+
   providers = {
     aws = aws.prod
   }
 
-  vpc_id              = var.prod_vpc_id
+  vpc_id               = var.prod_vpc_id
   headscale_server_url = module.coordination_server.headscale_url
-  advertised_routes   = var.prod_advertised_routes
-  advertise_tags      = var.prod_advertise_tags
-  hostname            = var.prod_hostname
-  aws_region          = var.aws_region
+  advertised_routes    = var.prod_advertised_routes
+  advertise_tags       = var.prod_advertise_tags
+  hostname             = var.prod_hostname
+  aws_region           = var.aws_region
 }
