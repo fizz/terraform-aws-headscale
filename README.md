@@ -54,7 +54,18 @@ oidc_client_id    = "123456789-abc.apps.googleusercontent.com"
 allowed_domains   = ["vanguard.dev"]
 advertised_routes = ["10.0.0.0/16"]
 advertise_tags    = "tag:vanguard-dev"
+ami_id            = "ami-0123456789abcdef0"
 ```
+
+`ami_id` has no default. Look up the current Amazon Linux 2023 arm64 AMI for your region:
+
+```bash
+aws ssm get-parameter \
+  --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64 \
+  --query Parameter.Value --output text
+```
+
+A new AMI replaces the instance, so it changes only when you change this value.
 
 3. Store your OIDC client secret in SSM Parameter Store:
 
@@ -100,6 +111,7 @@ Headscale coordinator + built-in Tailscale subnet router on a single EC2 instanc
 | `allowed_domains` | Email domains allowed to authenticate via OIDC | `list(string)` | -- | yes |
 | `advertised_routes` | CIDR ranges to advertise via the built-in subnet router | `list(string)` | -- | yes |
 | `advertise_tags` | Headscale ACL tag applied to the subnet-router node (e.g. `tag:infra`) | `string` | -- | yes |
+| `ami_id` | Amazon Linux 2023 arm64 AMI ID. A change replaces the instance | `string` | -- | yes |
 | `acl_policy` | Full Headscale ACL policy as a JSON string | `string` | -- | yes |
 | `name_prefix` | Prefix for all resource names | `string` | `"headscale"` | no |
 | `subnet_id` | Public subnet ID (auto-detected from VPC if not set) | `string` | `null` | no |
@@ -137,6 +149,7 @@ Tailscale-only instance for additional accounts/VPCs. Connects outbound to the c
 | `headscale_server_url` | URL of the Headscale coordination server | `string` | -- | yes |
 | `advertised_routes` | CIDR ranges to advertise via the subnet router | `list(string)` | -- | yes |
 | `advertise_tags` | Headscale ACL tag applied to this node (e.g. `tag:infra`) | `string` | -- | yes |
+| `ami_id` | Amazon Linux 2023 arm64 AMI ID. A change replaces the instance | `string` | -- | yes |
 | `name_prefix` | Prefix for all resource names | `string` | `"headscale"` | no |
 | `subnet_id` | Private subnet ID (auto-detected from VPC if not set) | `string` | `null` | no |
 | `hostname` | Tailscale hostname for this node | `string` | `"subnet-router"` | no |

@@ -32,6 +32,8 @@ provider "aws" {
 module "headscale" {
   source = "../../modules/coordination-server"
 
+  ami_id = var.ami_id
+
   vpc_id            = var.vpc_id
   subnet_id         = var.subnet_id
   domain            = var.headscale_domain

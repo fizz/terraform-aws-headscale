@@ -21,3 +21,4 @@ prod_advertise_tags    = "tag:prod"
 
 # Prod subnet router
 prod_hostname = "prod-subnet-router"
+ami_id            = "ami-0123456789abcdef0"

@@ -1,19 +1,4 @@
 # Data sources
-data "aws_ami" "al2023_arm" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-2023.*-kernel-6.1-arm64"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
-
 data "aws_vpc" "selected" {
   id = var.vpc_id
 }
@@ -37,7 +22,6 @@ data "aws_caller_identity" "current" {}
 
 locals {
   selected_subnet_id = var.subnet_id != null ? var.subnet_id : data.aws_subnets.private.ids[0]
-  ami_id             = var.ami_id != null ? var.ami_id : data.aws_ami.al2023_arm.id
 }
 
 # Security Group - egress only, no inbound needed for subnet router
@@ -168,7 +152,7 @@ resource "aws_cloudwatch_log_group" "this" {
 
 # EC2 Instance - subnet router only (no Headscale server)
 resource "aws_instance" "this" {
-  ami                    = local.ami_id
+  ami                    = var.ami_id
   instance_type          = var.instance_type
   subnet_id              = local.selected_subnet_id
   vpc_security_group_ids = [aws_security_group.this.id]
@@ -178,6 +162,12 @@ resource "aws_instance" "this" {
   # User data runs on first boot only. Replace the instance when it changes, or the
   # new config never runs.
   user_data_replace_on_change = true
+
+  # IMDSv2 only. The user data already requests a session token.
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
   user_data = templatefile("${path.module}/userdata.sh", {
     headscale_server_url = var.headscale_server_url
     advertised_routes    = join(",", var.advertised_routes)
