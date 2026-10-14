@@ -161,6 +161,7 @@ dns:
     global:
       - 1.1.1.1
       - 8.8.8.8
+    split: ${split_dns}
 
 log:
   level: info

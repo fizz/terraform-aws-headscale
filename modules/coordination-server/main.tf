@@ -222,6 +222,7 @@ resource "aws_instance" "this" {
     name_prefix                 = var.name_prefix
     acl_policy                  = var.acl_policy
     magic_dns_domain            = var.magic_dns_domain
+    split_dns                   = jsonencode(var.split_dns)
     advertise_tags              = var.advertise_tags
     hostname                    = var.hostname
     oidc_client_secret_ssm_path = var.oidc_client_secret_ssm_path
