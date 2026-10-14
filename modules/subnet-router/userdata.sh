@@ -1,5 +1,7 @@
 #!/bin/bash
-set -ex
+# No -x: the script handles the pre-auth key, and a trace would print it to the
+# console log.
+set -e
 
 # Log everything to CloudWatch
 exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
@@ -38,13 +40,14 @@ AUTHKEY=$(aws ssm get-parameter \
 # Install Tailscale client
 curl -fsSL https://tailscale.com/install.sh | sh
 
-# Connect Tailscale as subnet router to Headscale server
+# Connect Tailscale as subnet router to Headscale server. The pre-auth key carries the
+# tag. Headscale rejects --advertise-tags from a node that a tagged key registers,
+# because the tag is not its own tag owner.
 tailscale up \
   --login-server=${headscale_server_url} \
   --authkey="$AUTHKEY" \
   --advertise-routes=${advertised_routes} \
   --snat-subnet-routes=true \
-  --advertise-tags=${advertise_tags} \
   --accept-dns=false \
   --hostname=${hostname}
 

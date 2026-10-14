@@ -1,5 +1,7 @@
 #!/bin/bash
-set -ex
+# No -x: the script handles the OIDC client secret and a pre-auth key, and a trace
+# would print both to the console log.
+set -e
 
 # Terraform-injected variables
 HEADSCALE_DOMAIN="${headscale_domain}"
@@ -307,7 +309,6 @@ for i in {1..5}; do
     --authkey="$AUTHKEY" \
     --advertise-routes="$ADVERTISED_ROUTES" \
     --snat-subnet-routes=true \
-    --advertise-tags="$ADVERTISE_TAGS" \
     --accept-dns=false \
     --hostname="$HOSTNAME_TAG"; then
     echo "Tailscale connected successfully"
