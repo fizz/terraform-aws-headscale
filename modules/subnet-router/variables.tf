@@ -26,7 +26,7 @@ variable "advertised_routes" {
 }
 
 variable "advertise_tags" {
-  description = "Headscale ACL tag applied to this subnet-router node (e.g. tag:infra)"
+  description = "Headscale ACL tag of this subnet-router node (e.g. tag:infra). The pre-auth key in auth_key_ssm_path must carry this tag: the key applies it, and the router does not request it."
   type        = string
 }
 

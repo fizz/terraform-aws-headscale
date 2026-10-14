@@ -13,6 +13,7 @@ module "coordination_server" {
   advertise_tags              = var.advertise_tags
   hostname                    = var.hostname
   magic_dns_domain            = var.magic_dns_domain
+  split_dns                   = var.split_dns
   acl_policy                  = var.acl_policy
   instance_type               = var.instance_type
   ssh_key_name                = var.ssh_key_name

@@ -65,6 +65,12 @@ variable "magic_dns_domain" {
   default     = "vpn.internal"
 }
 
+variable "split_dns" {
+  description = "DNS domains to resolve with specific nameservers inside the tailnet, for example { \"corp.local\" = [\"10.0.0.2\"] }. The ACL must allow the nameservers on port 53."
+  type        = map(list(string))
+  default     = {}
+}
+
 variable "acl_policy" {
   description = "Full Headscale ACL policy as a JSON string"
   type        = string
