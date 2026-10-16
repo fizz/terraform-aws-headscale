@@ -61,7 +61,7 @@ if [ -n "$CACHE_DEVICE" ]; then
 fi
 
 # Keep the database and the noise key on the persistent volume. A new instance
-# then starts with the same nodes and the same server identity, and clients
+# then starts with the nodes and the server identity of the old one, and clients
 # reconnect without a new login. Without the volume, they stay on the root disk.
 STATE_DIR=/var/lib/headscale
 if mountpoint -q /var/lib/headscale/cache; then

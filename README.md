@@ -125,6 +125,18 @@ Headscale coordinator + built-in Tailscale subnet router on a single EC2 instanc
 | `log_retention_days` | CloudWatch log group retention in days | `number` | `365` | no |
 | `tags` | Tags to apply to all resources | `map(string)` | `{}` | no |
 
+#### State and instance replacement
+
+A change to the user data, the AMI or the instance type replaces the instance. The Headscale database and the noise key are on the EBS volume, at `/var/lib/headscale/cache/state/`. The volume stays when the instance is replaced. The new instance starts with the nodes and the server identity of the old one, and clients reconnect without a new login.
+
+**Upgrade from 2.1 or earlier.** Before 2.2, the database and the noise key were on the root disk, and a replacement deleted them. The upgrade replaces the instance. Copy the state to the volume immediately before you apply:
+
+```bash
+scripts/ssm_command.sh 'systemctl stop headscale && mkdir -p /var/lib/headscale/cache/state && cp -a /var/lib/headscale/db.sqlite* /var/lib/headscale/*private.key /var/lib/headscale/cache/state/ && chown -R headscale:headscale /var/lib/headscale/cache/state'
+```
+
+The command stops Headscale so that the copy of the database is complete. The tailnet stays down until the new instance starts.
+
 #### Outputs
 
 | Name | Description |
