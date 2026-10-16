@@ -99,7 +99,7 @@ The ACL policy on the coordination server must include tags and autoApprovers fo
 
 ### coordination-server
 
-Headscale coordinator + built-in Tailscale subnet router on a single EC2 instance. Creates an EIP, security group, IAM instance profile, CloudWatch log group, EBS cache volume (for Let's Encrypt state + SQLite DB), and an optional Route53 A record.
+Headscale coordinator + built-in Tailscale subnet router on a single EC2 instance. Creates an EIP, security group, IAM instance profile, CloudWatch log group, EBS volume (for the Let's Encrypt cache, the SQLite DB and the noise key), and an optional Route53 A record.
 
 #### Inputs
 

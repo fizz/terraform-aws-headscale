@@ -32,7 +32,7 @@ sysctl -p /etc/sysctl.d/99-tailscale.conf
 # Install dependencies
 dnf install -y amazon-cloudwatch-agent jq tmux
 
-# Mount persistent cache volume (Let's Encrypt state)
+# Mount the persistent volume (Let's Encrypt cache and Headscale state)
 CACHE_DEVICE=""
 CACHE_VOLUME_ID_NO_DASH="$(printf '%s' "$CACHE_VOLUME_ID" | tr -d '-')"
 if [ -n "$CACHE_VOLUME_ID_NO_DASH" ]; then
@@ -59,6 +59,15 @@ if [ -n "$CACHE_DEVICE" ]; then
   fi
   mount /var/lib/headscale/cache || true
 fi
+
+# Keep the database and the noise key on the persistent volume. A new instance
+# then starts with the same nodes and the same server identity, and clients
+# reconnect without a new login. Without the volume, they stay on the root disk.
+STATE_DIR=/var/lib/headscale
+if mountpoint -q /var/lib/headscale/cache; then
+  STATE_DIR=/var/lib/headscale/cache/state
+fi
+mkdir -p "$STATE_DIR"
 
 # Install Headscale (systemd, no Docker)
 ARCH="$(uname -m)"
@@ -134,9 +143,9 @@ metrics_listen_addr: 127.0.0.1:9090
 grpc_listen_addr: 127.0.0.1:50443
 grpc_allow_insecure: false
 
-private_key_path: /var/lib/headscale/private.key
+private_key_path: $STATE_DIR/private.key
 noise:
-  private_key_path: /var/lib/headscale/noise_private.key
+  private_key_path: $STATE_DIR/noise_private.key
 
 prefixes:
   v4: 100.64.0.0/10
@@ -154,7 +163,7 @@ ephemeral_node_inactivity_timeout: 30m
 database:
   type: sqlite
   sqlite:
-    path: /var/lib/headscale/db.sqlite
+    path: $STATE_DIR/db.sqlite
 
 dns:
   magic_dns: true
