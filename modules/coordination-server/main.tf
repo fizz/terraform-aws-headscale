@@ -181,7 +181,7 @@ resource "aws_cloudwatch_log_group" "this" {
   })
 }
 
-# Persistent cache volume for Let's Encrypt state
+# Persistent volume for the Let's Encrypt cache, the Headscale database and the noise key
 resource "aws_ebs_volume" "cache" {
   availability_zone = data.aws_subnet.selected.availability_zone
   size              = 1
