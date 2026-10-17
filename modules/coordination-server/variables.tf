@@ -121,3 +121,26 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "headscale_version" {
+  description = "Headscale release to install, as its GitHub tag. A change installs it on the running instance"
+  type        = string
+  default     = "v0.29.5"
+
+  validation {
+    condition     = can(regex("^v[0-9]+\\.[0-9]+\\.[0-9]+$", var.headscale_version))
+    error_message = "headscale_version must be a release tag such as v0.29.5."
+  }
+}
+
+variable "provision_schedule" {
+  description = "How often the provisioning association runs again on the instance, to put back changes made by hand"
+  type        = string
+  default     = "rate(1 day)"
+}
+
+variable "provision_wait_seconds" {
+  description = "How long terraform apply waits for a provisioning run to succeed. 0 does not wait"
+  type        = number
+  default     = 1200
+}

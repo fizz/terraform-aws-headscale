@@ -99,7 +99,7 @@ The ACL policy on the coordination server must include tags and autoApprovers fo
 
 ### coordination-server
 
-Headscale coordinator + built-in Tailscale subnet router on a single EC2 instance. Creates an EIP, security group, IAM instance profile, CloudWatch log group, EBS volume (for the Let's Encrypt cache, the SQLite DB and the noise key), and an optional Route53 A record.
+Headscale coordinator + built-in Tailscale subnet router on a single EC2 instance. Creates an EIP, security group, IAM instance profile, CloudWatch log group, EBS volume for the state, an SSM document and association that configure the instance, and an optional Route53 A record.
 
 #### Inputs
 
@@ -123,13 +123,38 @@ Headscale coordinator + built-in Tailscale subnet router on a single EC2 instanc
 | `ssh_key_name` | EC2 key pair name | `string` | `null` | no |
 | `route53_zone_id` | Route53 hosted zone ID for DNS record (skipped if null) | `string` | `null` | no |
 | `log_retention_days` | CloudWatch log group retention in days | `number` | `365` | no |
+| `headscale_version` | Headscale release to install, as its GitHub tag. A change installs it on the running instance | `string` | `"v0.29.5"` | no |
+| `provision_schedule` | How often the provisioning association runs again, to put back changes made by hand | `string` | `"rate(1 day)"` | no |
+| `provision_wait_seconds` | How long `terraform apply` waits for a provisioning run to succeed. 0 does not wait | `number` | `1200` | no |
 | `tags` | Tags to apply to all resources | `map(string)` | `{}` | no |
+
+#### Provisioning
+
+The user data only mounts the EBS volume. An SSM Command document, `<name_prefix>-provision`, configures the rest. An SSM association runs the document when Terraform creates it, when the document or the instance changes, and again on `provision_schedule`. The document has three steps, which run in this order:
+
+1. **observability:** installs the CloudWatch agent and ships `/var/log/headscale.log`, the provisioning log and the user-data log to the log group, with disk, memory and swap metrics.
+2. **headscale:** installs the pinned `headscale_version` and writes the config, the ACL policy and the systemd unit. It restarts Headscale only when one of them changed.
+3. **router:** installs Tailscale and joins the instance as the subnet router for `advertised_routes`, then approves the routes.
+
+Every step is idempotent. A step that fails does not stop the steps after it, and the command and the association show the failure. Observability runs first, so its logs do not depend on a later step. `terraform apply` waits for the first run and fails when a step fails (`provision_wait_seconds`).
+
+A change to the ACL policy, the split DNS, the routes or the Headscale version runs the document again on the running instance. It does not replace the instance. To run it again by hand, use the `provision_run_command` output. The `provision_status_command` output shows the result of the latest run.
+
+Package installs wait for the rpm database. At boot, the Inspector VM scanner holds the rpm lock while it lists the packages, and dnf does not wait for that lock. The steps wait with `fuser` and retry.
 
 #### State and instance replacement
 
-A change to the user data, the AMI or the instance type replaces the instance. The Headscale database and the noise key are on the EBS volume, at `/var/lib/headscale/cache/state/`. The volume stays when the instance is replaced. The new instance starts with the nodes and the server identity of the old one, and clients reconnect without a new login.
+A change to the user data, the AMI or the instance type replaces the instance. The state is on the EBS volume, which stays when the instance is replaced:
 
-**Upgrade from 2.1 or earlier.** Before 2.2, the database and the noise key were on the root disk, and a replacement deleted them. The upgrade replaces the instance. Copy the state to the volume immediately before you apply:
+- `/var/lib/headscale/cache/state/`: the Headscale database and the noise key
+- `/var/lib/headscale/cache/tailscale/`: the node identity of the built-in subnet router
+- `/var/lib/headscale/cache/`: the Let's Encrypt cache
+
+The new instance starts with the nodes and the server identity of the old one, and clients reconnect without a new login. If the volume is not mounted, the headscale and router steps stop and report a failure. They do not start with an empty database.
+
+**Upgrade from 2.2 to 3.0.** The upgrade replaces the instance once. The state is already on the volume, so no manual step is necessary.
+
+**Upgrade from 2.1 or earlier.** Before 2.2, the database and the noise key were on the root disk, and a replacement deleted them. Copy the state to the volume immediately before you apply:
 
 ```bash
 scripts/ssm_command.sh 'systemctl stop headscale && mkdir -p /var/lib/headscale/cache/state && cp -a /var/lib/headscale/db.sqlite* /var/lib/headscale/*private.key /var/lib/headscale/cache/state/ && chown -R headscale:headscale /var/lib/headscale/cache/state'
@@ -148,6 +173,9 @@ The command stops Headscale so that the copy of the database is complete. The ta
 | `ssm_connect` | SSM command to connect to the instance |
 | `security_group_id` | Security group ID |
 | `log_group` | CloudWatch log group for audit logs |
+| `provision_association_id` | SSM association that configures the instance |
+| `provision_status_command` | Command that shows the result of the latest provisioning run |
+| `provision_run_command` | Command that runs the provisioning again now |
 
 ### subnet-router
 
