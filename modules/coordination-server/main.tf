@@ -27,6 +27,8 @@ data "aws_region" "current" {}
 
 data "aws_caller_identity" "current" {}
 
+data "aws_partition" "current" {}
+
 # Elastic IP for stable DNS
 resource "aws_eip" "this" {
   domain = "vpc"
@@ -189,7 +191,72 @@ resource "aws_ebs_volume" "cache" {
   encrypted         = true
 
   tags = merge(var.tags, {
-    Name = "${var.name_prefix}-cache"
+    Name           = "${var.name_prefix}-cache"
+    HeadscaleState = var.name_prefix
+  })
+
+  # A new AZ would destroy this volume and create an empty one, and the plan shows
+  # that as one routine replacement. The volume stays in its AZ, and the
+  # precondition on the instance stops a plan that moves the instance away from it.
+  lifecycle {
+    ignore_changes = [availability_zone]
+  }
+}
+
+# Daily snapshots of the state volume. They cover damage between applies: a bad
+# provisioning run, a change made by hand, a corrupt database.
+resource "aws_iam_role" "dlm" {
+  count = var.state_snapshot_retain_count > 0 ? 1 : 0
+  name  = "${var.name_prefix}-dlm"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "dlm.amazonaws.com" }
+    }]
+  })
+
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-dlm"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "dlm" {
+  count      = var.state_snapshot_retain_count > 0 ? 1 : 0
+  role       = aws_iam_role.dlm[0].name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSDataLifecycleManagerServiceRole"
+}
+
+resource "aws_dlm_lifecycle_policy" "state" {
+  count              = var.state_snapshot_retain_count > 0 ? 1 : 0
+  description        = "Daily snapshots of the ${var.name_prefix} state volume"
+  execution_role_arn = aws_iam_role.dlm[0].arn
+  state              = "ENABLED"
+
+  policy_details {
+    resource_types = ["VOLUME"]
+    target_tags    = { HeadscaleState = var.name_prefix }
+
+    schedule {
+      name      = "daily"
+      copy_tags = true
+
+      create_rule {
+        interval      = 24
+        interval_unit = "HOURS"
+        times         = [var.state_snapshot_time]
+      }
+
+      retain_rule {
+        count = var.state_snapshot_retain_count
+      }
+    }
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-state-snapshots"
   })
 }
 
@@ -222,6 +289,13 @@ resource "aws_instance" "this" {
     volume_size           = 30
     encrypted             = true
     delete_on_termination = true
+  }
+
+  lifecycle {
+    precondition {
+      condition     = data.aws_subnet.selected.availability_zone == aws_ebs_volume.cache.availability_zone
+      error_message = "The state volume ${aws_ebs_volume.cache.id} is in ${aws_ebs_volume.cache.availability_zone}, and the selected subnet is in ${data.aws_subnet.selected.availability_zone}. Set subnet_id to a subnet in ${aws_ebs_volume.cache.availability_zone}, or move the state first: snapshot the volume, create a volume from the snapshot in the new AZ, and import it."
+    }
   }
 
   tags = merge(var.tags, {

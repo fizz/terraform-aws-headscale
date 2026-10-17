@@ -126,6 +126,8 @@ Headscale coordinator + built-in Tailscale subnet router on a single EC2 instanc
 | `headscale_version` | Headscale release to install, as its GitHub tag. A change installs it on the running instance | `string` | `"v0.29.5"` | no |
 | `provision_schedule` | How often the provisioning association runs again, to put back changes made by hand | `string` | `"rate(1 day)"` | no |
 | `provision_wait_seconds` | How long `terraform apply` waits for a provisioning run to succeed. 0 does not wait | `number` | `1200` | no |
+| `state_snapshot_retain_count` | Daily snapshots of the state volume to keep. 0 turns the snapshots off | `number` | `7` | no |
+| `state_snapshot_time` | UTC time (HH:MM) of the daily snapshot | `string` | `"03:00"` | no |
 | `tags` | Tags to apply to all resources | `map(string)` | `{}` | no |
 
 #### Provisioning
@@ -151,6 +153,12 @@ A change to the user data, the AMI or the instance type replaces the instance. T
 - `/var/lib/headscale/cache/`: the Let's Encrypt cache
 
 The new instance starts with the nodes and the server identity of the old one, and clients reconnect without a new login. If the volume is not mounted, the headscale and router steps stop and report a failure. They do not start with an empty database.
+
+**Snapshots.** Data Lifecycle Manager takes a snapshot of the state volume every day at `state_snapshot_time` and keeps the last `state_snapshot_retain_count`. The policy selects the volume by its `HeadscaleState` tag. To restore, create a volume from a snapshot in the same AZ, then import it in place of the old one.
+
+**Availability zone.** The volume stays in the AZ where Terraform created it. If the subnet changes to another AZ, the plan fails with a message that names both AZs. Without this check, Terraform would replace the volume with an empty one, and the plan would show that as one routine replacement.
+
+**Upgrade from 3.0 to 3.1.** No replacement. The apply adds a tag to the volume and creates the snapshot policy and its role.
 
 **Upgrade from 2.2 to 3.0.** The upgrade replaces the instance once. The state is already on the volume, so no manual step is necessary.
 

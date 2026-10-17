@@ -139,6 +139,23 @@ variable "provision_schedule" {
   default     = "rate(1 day)"
 }
 
+variable "state_snapshot_retain_count" {
+  description = "Daily snapshots of the state volume to keep, taken by Data Lifecycle Manager. 0 turns the snapshots off"
+  type        = number
+  default     = 7
+
+  validation {
+    condition     = var.state_snapshot_retain_count >= 0 && var.state_snapshot_retain_count <= 1000
+    error_message = "state_snapshot_retain_count must be between 0 and 1000."
+  }
+}
+
+variable "state_snapshot_time" {
+  description = "UTC time (HH:MM) of the daily state-volume snapshot"
+  type        = string
+  default     = "03:00"
+}
+
 variable "provision_wait_seconds" {
   description = "How long terraform apply waits for a provisioning run to succeed. 0 does not wait"
   type        = number
