@@ -118,7 +118,7 @@ resource "aws_iam_role_policy" "cloudwatch_logs" {
           "logs:PutLogEvents",
           "logs:DescribeLogStreams"
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/${var.name_prefix}/*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/${var.name_prefix}/*"
       }
     ]
   })
@@ -158,7 +158,7 @@ resource "aws_iam_role_policy" "ssm_params" {
           "ssm:GetParameter",
           "ssm:GetParameters"
         ]
-        Resource = "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter${var.oidc_client_secret_ssm_path}"
+        Resource = "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${var.oidc_client_secret_ssm_path}"
       }
     ]
   })
@@ -350,7 +350,7 @@ locals {
     oidc_issuer                 = var.oidc_issuer
     oidc_client_id              = var.oidc_client_id
     oidc_client_secret_ssm_path = var.oidc_client_secret_ssm_path
-    aws_region                  = data.aws_region.current.id
+    aws_region                  = data.aws_region.current.region
     acl_policy                  = var.acl_policy
     magic_dns_domain            = var.magic_dns_domain
     split_dns                   = jsonencode(var.split_dns)
