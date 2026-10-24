@@ -40,10 +40,10 @@ output "provision_association_id" {
 
 output "provision_status_command" {
   description = "Command that shows the result of the latest provisioning run"
-  value       = "aws ssm describe-association-executions --association-id ${aws_ssm_association.provision.association_id} --max-items 1 --region ${data.aws_region.current.id}"
+  value       = "aws ssm describe-association-executions --association-id ${aws_ssm_association.provision.association_id} --max-items 1 --region ${data.aws_region.current.region}"
 }
 
 output "provision_run_command" {
   description = "Command that runs the provisioning again now"
-  value       = "aws ssm start-associations-once --association-ids ${aws_ssm_association.provision.association_id} --region ${data.aws_region.current.id}"
+  value       = "aws ssm start-associations-once --association-ids ${aws_ssm_association.provision.association_id} --region ${data.aws_region.current.region}"
 }
