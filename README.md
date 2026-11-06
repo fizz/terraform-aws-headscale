@@ -119,6 +119,7 @@ Headscale coordinator + built-in Tailscale subnet router on a single EC2 instanc
 | `oidc_client_secret_ssm_path` | SSM path containing the OIDC client secret | `string` | `"/headscale/oidc-client-secret"` | no |
 | `hostname` | Tailscale hostname for the built-in subnet router node | `string` | `"subnet-router"` | no |
 | `magic_dns_domain` | MagicDNS base domain inside the tailnet | `string` | `"vpn.internal"` | no |
+| `override_local_dns` | Override clients' local DNS and force the global tailnet resolvers | `bool` | `false` | no |
 | `instance_type` | EC2 instance type | `string` | `"t4g.nano"` | no |
 | `ssh_key_name` | EC2 key pair name | `string` | `null` | no |
 | `route53_zone_id` | Route53 hosted zone ID for DNS record (skipped if null) | `string` | `null` | no |
@@ -133,6 +134,8 @@ Headscale coordinator + built-in Tailscale subnet router on a single EC2 instanc
 #### Provisioning
 
 The user data only mounts the EBS volume. An SSM Command document, `<name_prefix>-provision`, configures the rest. An SSM association runs the document when Terraform creates it, when the document or the instance changes, and again on `provision_schedule`. The document has three steps, which run in this order:
+
+By default, clients keep using their local network DNS. Split DNS nameservers still resolve their configured private domains. Set `override_local_dns = true` only when the entire tailnet should use the configured global resolvers instead. A client can opt out of all tailnet DNS with `tailscale set --accept-dns=false`; that does not force a per-client global DNS override.
 
 1. **observability:** installs the CloudWatch agent and ships `/var/log/headscale.log`, the provisioning log and the user-data log to the log group, with disk, memory and swap metrics.
 2. **headscale:** installs the pinned `headscale_version` and writes the config, the ACL policy and the systemd unit. It restarts Headscale only when one of them changed.

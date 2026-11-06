@@ -354,6 +354,7 @@ locals {
     acl_policy                  = var.acl_policy
     magic_dns_domain            = var.magic_dns_domain
     split_dns                   = jsonencode(var.split_dns)
+    override_local_dns          = var.override_local_dns
     advertised_routes           = join(",", var.advertised_routes)
     advertise_tags              = var.advertise_tags
     hostname                    = var.hostname

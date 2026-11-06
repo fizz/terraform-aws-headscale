@@ -71,6 +71,12 @@ variable "split_dns" {
   default     = {}
 }
 
+variable "override_local_dns" {
+  description = "Force tailnet clients to use the configured global DNS resolvers instead of their local DNS. Defaults to false so users keep their network DNS; split DNS remains available."
+  type        = bool
+  default     = false
+}
+
 variable "acl_policy" {
   description = "Full Headscale ACL policy as a JSON string"
   type        = string

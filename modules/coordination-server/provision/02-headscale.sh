@@ -79,6 +79,7 @@ database:
 dns:
   magic_dns: true
   base_domain: ${magic_dns_domain}
+  override_local_dns: ${override_local_dns}
   nameservers:
     global:
       - 1.1.1.1
