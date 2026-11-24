@@ -181,7 +181,7 @@ resource "aws_instance" "this" {
 
   root_block_device {
     volume_type           = "gp3"
-    volume_size           = 30 # AL2023 AMI minimum
+    volume_size           = var.root_volume_size
     encrypted             = true
     delete_on_termination = true
   }
@@ -189,4 +189,63 @@ resource "aws_instance" "this" {
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-subnet-router"
   })
+}
+
+# --- Client gateway ----------------------------------------------------------
+#
+# accept_routes, masquerade_cidrs and clamp_mss_to_pmtu are set by an SSM Command
+# document, not by the user data. A change to the user data replaces the instance,
+# and a change to these inputs does not. The association runs the document when it
+# is created, when the document changes, and on a schedule. The document is safe to
+# run again, and it removes what an earlier run set.
+#
+# With all three inputs at their defaults the module creates neither resource.
+
+locals {
+  client_gateway = var.accept_routes || length(var.masquerade_cidrs) > 0 || var.clamp_mss_to_pmtu
+}
+
+resource "aws_ssm_document" "client_gateway" {
+  count = local.client_gateway ? 1 : 0
+
+  name            = "${var.name_prefix}-client-gateway"
+  document_type   = "Command"
+  document_format = "JSON"
+
+  content = jsonencode({
+    schemaVersion = "2.2"
+    description   = "Set the client gateway options of the subnet router ${var.name_prefix}"
+    mainSteps = [{
+      action = "aws:runShellScript"
+      name   = "clientGateway"
+      inputs = {
+        timeoutSeconds = "1200"
+        runCommand = [
+          templatefile("${path.module}/client-gateway.sh", {
+            accept_routes    = var.accept_routes
+            masquerade_cidrs = join(" ", var.masquerade_cidrs)
+            clamp_mss        = var.clamp_mss_to_pmtu
+          })
+        ]
+      }
+    }]
+  })
+
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-client-gateway"
+  })
+}
+
+resource "aws_ssm_association" "client_gateway" {
+  count = local.client_gateway ? 1 : 0
+
+  name                = aws_ssm_document.client_gateway[0].name
+  association_name    = "${var.name_prefix}-client-gateway"
+  document_version    = aws_ssm_document.client_gateway[0].latest_version
+  schedule_expression = var.provision_schedule
+
+  targets {
+    key    = "InstanceIds"
+    values = [aws_instance.this.id]
+  }
 }

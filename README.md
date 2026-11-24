@@ -198,7 +198,6 @@ Tailscale-only instance for additional accounts/VPCs. Connects outbound to the c
 |------|-------------|------|---------|----------|
 | `vpc_id` | VPC ID for the subnet router instance | `string` | -- | yes |
 | `headscale_server_url` | URL of the Headscale coordination server | `string` | -- | yes |
-| `advertised_routes` | CIDR ranges to advertise via the subnet router | `list(string)` | -- | yes |
 | `advertise_tags` | Headscale ACL tag applied to this node (e.g. `tag:infra`) | `string` | -- | yes |
 | `ami_id` | Amazon Linux 2023 arm64 AMI ID. A change replaces the instance | `string` | -- | yes |
 | `name_prefix` | Prefix for all resource names | `string` | `"headscale"` | no |
@@ -208,6 +207,12 @@ Tailscale-only instance for additional accounts/VPCs. Connects outbound to the c
 | `instance_type` | EC2 instance type | `string` | `"t4g.nano"` | no |
 | `aws_region` | AWS region (used in userdata for SSM API calls) | `string` | `"us-east-1"` | no |
 | `log_retention_days` | CloudWatch log group retention in days | `number` | `365` | no |
+| `advertised_routes` | CIDR ranges to advertise via the subnet router. An empty list advertises nothing. A change replaces the instance | `list(string)` | `[]` | no |
+| `accept_routes` | Accept the routes other routers advertise, so hosts in the VPC reach them | `bool` | `false` | no |
+| `masquerade_cidrs` | Source ranges rewritten to the router's tailnet address when they leave `tailscale0` | `list(string)` | `[]` | no |
+| `clamp_mss_to_pmtu` | Clamp the MSS of forwarded TCP connections through `tailscale0`, both directions | `bool` | `false` | no |
+| `root_volume_size` | Root volume in GiB, 8 or more (the AMI root is 8 GiB). A larger value grows the volume in place; a smaller one replaces the instance | `number` | `30` | no |
+| `provision_schedule` | How often the client gateway association runs again | `string` | `"rate(1 day)"` | no |
 | `tags` | Tags to apply to all resources | `map(string)` | `{}` | no |
 
 #### Outputs
@@ -215,10 +220,17 @@ Tailscale-only instance for additional accounts/VPCs. Connects outbound to the c
 | Name | Description |
 |------|-------------|
 | `instance_id` | EC2 instance ID |
+| `network_interface_id` | Primary network interface ID, the target of an `aws_route` |
 | `private_ip` | Private IP address |
 | `advertised_routes` | Routes advertised by this subnet router |
 | `security_group_id` | Security group ID |
 | `iam_role_arn` | IAM role ARN for the instance |
+
+#### Client gateway
+
+A router can join a tailnet as a one-way client: hosts in its VPC reach a range behind another router, and it advertises nothing. Set `advertised_routes = []`, `accept_routes = true` and `masquerade_cidrs` to the VPC range, point a route at `network_interface_id`, and set `clamp_mss_to_pmtu = true` when large transfers stall. The clamp has two rules: `-o tailscale0` for the SYN going out (Tailscale's site-to-site guide gives this one), and `-i tailscale0` for the SYN-ACK coming back, so the hosts in the VPC also send segments that fit the tunnel. The masquerade rule `-s <cidr> -o tailscale0 -j MASQUERADE` gives the far side the router's tailnet address, so it needs no route back.
+
+An SSM document and association apply `accept_routes`, `masquerade_cidrs` and `clamp_mss_to_pmtu`. A change runs on the running instance and does not replace it. The settings survive a reboot (`tailscale set` keeps accept-routes; a systemd unit puts the rules back), and the document is safe to run again. With all three at their defaults the module creates neither resource and the user data is the same as in 5.0.0. Removing all three destroys the association and leaves the last applied state on the instance. Undo it by hand with `tailscale set --accept-routes=false` and `systemctl disable --now client-gateway`, or replace the instance. Add an inbound rule to `security_group_id` for the traffic the hosts send.
 
 ## Scripts
 
