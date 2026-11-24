@@ -21,8 +21,9 @@ variable "headscale_server_url" {
 }
 
 variable "advertised_routes" {
-  description = "CIDR ranges to advertise via the subnet router"
+  description = "CIDR ranges to advertise via the subnet router. An empty list advertises nothing, for a router that only reaches ranges other routers advertise. A change replaces the instance"
   type        = list(string)
+  default     = []
 }
 
 variable "advertise_tags" {
@@ -74,6 +75,46 @@ variable "ami_id" {
     condition     = can(regex("^ami-[0-9a-f]{8,17}$", var.ami_id))
     error_message = "ami_id must be an AMI ID such as ami-0123456789abcdef0."
   }
+}
+
+variable "accept_routes" {
+  description = "Accept the routes that other routers in the tailnet advertise, so hosts in the VPC can reach them. A change runs on the running instance"
+  type        = bool
+  default     = false
+}
+
+variable "masquerade_cidrs" {
+  description = "Source CIDR ranges to rewrite to the router's tailnet address when their traffic leaves tailscale0, for a router that advertises no route. A change runs on the running instance"
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for cidr in var.masquerade_cidrs : can(cidrnetmask(cidr))])
+    error_message = "masquerade_cidrs must be IPv4 CIDR ranges such as 10.0.0.0/16."
+  }
+}
+
+variable "clamp_mss_to_pmtu" {
+  description = "Clamp the TCP MSS of forwarded connections through tailscale0 to its MTU, on the SYN going out and the SYN-ACK coming back. A change runs on the running instance"
+  type        = bool
+  default     = false
+}
+
+variable "root_volume_size" {
+  description = "Root volume size in GiB. The Amazon Linux 2023 AMI has an 8 GiB root, the smallest size EC2 accepts for it. A larger value grows the volume in place; a smaller one replaces the instance"
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.root_volume_size >= 8 && var.root_volume_size == floor(var.root_volume_size)
+    error_message = "root_volume_size must be a whole number of GiB, 8 or more."
+  }
+}
+
+variable "provision_schedule" {
+  description = "How often the client gateway association runs again on the instance, to put back changes made by hand. Used only when accept_routes, masquerade_cidrs or clamp_mss_to_pmtu is set"
+  type        = string
+  default     = "rate(1 day)"
 }
 
 variable "tags" {

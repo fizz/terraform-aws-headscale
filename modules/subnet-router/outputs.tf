@@ -3,6 +3,11 @@ output "instance_id" {
   value       = aws_instance.this.id
 }
 
+output "network_interface_id" {
+  description = "Primary network interface ID of the subnet router, the target of an aws_route"
+  value       = aws_instance.this.primary_network_interface_id
+}
+
 output "private_ip" {
   description = "Private IP address of the subnet router"
   value       = aws_instance.this.private_ip
